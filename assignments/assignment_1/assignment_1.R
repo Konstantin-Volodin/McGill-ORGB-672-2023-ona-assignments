@@ -100,3 +100,5 @@ network %>%
   geom_node_point(aes(color=type, size=degree)) +
   geom_node_text(aes(label = name_c), repel=TRUE) +
   theme_graph(foreground=NA)
+
+
