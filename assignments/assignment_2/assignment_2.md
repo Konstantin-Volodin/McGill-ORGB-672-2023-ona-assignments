@@ -1,4 +1,26 @@
-## CODE
+## Network
+
+![](assignment_2_files/figure-markdown_strict/unnamed-chunk-1-1.png)
+
+## Discussion
+
+There appears to be 2 approaches to developing the most useful informal
+networks based on our discussion in class
+
+1.  Be at the center of a dense network
+2.  Be an intermediary between various networks
+
+The first approach can be defined by the degree score and for the first
+approach B would likely be the best (as it has the highest other scores)
+The second approach can be defined by betweenness score and for this
+approach A would be best
+
+It seems to me that the 1st approach would result in closer friendships,
+whereas 2nd approach would result in many acquaintances Due to that I
+would go with 1st approach as making friends is more important for me
+than having many acquaintances who can help with career
+
+## Code
 
     ### CREATE DATA
     nodes <- tibble(name = c('1', '2', '3', '4', '5', '6','A', 'B', 'C', 'D'))
@@ -28,26 +50,5 @@
       ggraph(layout="graphopt") +
       geom_edge_link(edge_colour = "grey", alpha=0.5) +
       geom_node_point(aes(size=avg)) +
-      geom_node_text(aes(label = label), size=2, repel=TRUE)
-
-## Network
-
-![](assignment_2_files/figure-markdown_strict/unnamed-chunk-2-1.png)
-
-## Discussion
-
-There appears to be 2 approaches to developing the most useful informal
-networks based on our discussion in class
-
-1.  Be at the center of a dense network
-2.  Be an intermediary between various networks
-
-The first approach can be defined by the degree score and for the first
-approach B would likely be the best (as it has the highest other scores)
-The second approach can be defined by betweenness score and for this
-approach A would be best
-
-It seems to me that the 1st approach would result in closer friendships,
-whereas 2nd approach would result in many acquaintances Due to that I
-would go with 1st approach as making friends is more important for me
-than having many acquaintances who can help with career
+      geom_node_text(aes(label = label), size=2, repel=TRUE) +
+      theme_void()

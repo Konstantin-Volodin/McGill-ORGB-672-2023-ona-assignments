@@ -2,3 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
+assignments/assignment_3/app_data_sample.parquet
+assignments/assignment_3/edges_sample.csv

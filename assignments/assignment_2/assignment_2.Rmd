@@ -18,9 +18,7 @@ library(tidygraph)
 library(ggraph)
 ```
 
-## CODE 
-
-```{r}
+```{r chunk1, echo=FALSE}
 ### CREATE DATA
 nodes <- tibble(name = c('1', '2', '3', '4', '5', '6','A', 'B', 'C', 'D'))
 edges <- tibble(
@@ -49,7 +47,8 @@ plot <- network %>%
   ggraph(layout="graphopt") +
   geom_edge_link(edge_colour = "grey", alpha=0.5) +
   geom_node_point(aes(size=avg)) +
-  geom_node_text(aes(label = label), size=2, repel=TRUE)
+  geom_node_text(aes(label = label), size=2, repel=TRUE) +
+  theme_void()
 ```
 
 ## Network
@@ -69,3 +68,8 @@ The second approach can be defined by betweenness score and for this approach A 
 
 It seems to me that the 1st approach would result in closer friendships, whereas 2nd approach would result in many acquaintances
 Due to that I would go with 1st approach as making friends is more important for me than having many acquaintances who can help with career
+
+## Code
+
+```{r chunk1, eval=FALSE}
+```
