@@ -1,5 +1,5 @@
 ---
-title: "Exercise 2"
+title: "Exercise 3"
 author: "Konstantin Volodin"
 date: "`r Sys.Date()`"
 output: 
@@ -12,19 +12,10 @@ knit: (function(inputFile, encoding) {
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-library(tidyverse)
-library(igraph)
-library(tidygraph)
-library(ggraph)
-```
-
-## CODE 
-
-```{r chunk1, echo=FALSE, error=FALSE, warning=FALSE}
+library(knitr)
 library(here)
 library(arrow)
 library(gender)
-library(wru)
 library(lubridate)
 
 library(tidyverse)
@@ -32,77 +23,46 @@ library(igraph)
 library(tidygraph)
 library(ggraph)
 library(gridExtra)
+```
 
-
+```{r chunk1, echo=FALSE, include=FALSE}
 ### LOAD DATA
-applications <- read_parquet(here('assignments','assignment_3',"app_data_sample.parquet"))
+applications <- read_parquet(here('assignments','assignment_3',"app_data_clean.parquet"))
 edges <- read_csv(here('assignments','assignment_3',"edges_sample.csv"))
 
-
-### GENDER
-examiner_names <- applications %>% distinct(examiner_name_first)
-examiner_names_gender <- examiner_names %>% 
-  do(results = gender(.$examiner_name_first, method = "ssa")) %>% 
-  unnest(cols = c(results), keep_empty = TRUE) %>% 
-  select( examiner_name_first = name, gender)
-applications <- applications %>% left_join(examiner_names_gender, by = "examiner_name_first")
-
-
-### RACE
-examiner_surnames <- applications %>% 
-  select(surname = examiner_name_last) %>% 
-  distinct(surname)
-examiner_race <- predict_race(voter.file = examiner_surnames, surname.only = T) %>% 
-  as_tibble() %>%
-  mutate(max_race_p = pmax(pred.asi, pred.bla, pred.his, pred.oth, pred.whi)) %>% 
-  mutate(race = case_when(
-    max_race_p == pred.asi ~ "Asian", max_race_p == pred.bla ~ "black",
-    max_race_p == pred.his ~ "Hispanic", max_race_p == pred.oth ~ "other",
-    max_race_p == pred.whi ~ "white", TRUE ~ NA_character_
-  )) %>% 
-  select(surname,race)
-applications <- applications %>% left_join(examiner_race, by = c("examiner_name_last" = "surname"))
-
-
-### TENURE
-examiner_dates <- applications %>% select(examiner_id, filing_date, appl_status_date) 
-examiner_dates <- examiner_dates %>% 
-  mutate(start_date = ymd(filing_date), end_date = as_date(dmy_hms(appl_status_date))) %>%
-  group_by(examiner_id) %>% 
-  summarise(
-    earliest_date = min(start_date, na.rm = TRUE), 
-    latest_date = max(end_date, na.rm = TRUE),
-    tenure_days = interval(earliest_date, latest_date) %/% days(1)
-  ) %>% 
-  filter(year(latest_date)<2018) %>%
+### CLEAN DATA
+applications <- applications %>%
+  select(-c('gender.y', 'race.y')) %>% 
+  rename(gender = gender.x, race = race.x) %>%
   mutate(tenure_years = tenure_days / 365) %>%
-    mutate(tenure = case_when(
-      tenure_years <= 1 ~ '<1',
-      tenure_years <= 2 ~ '1-2',
-      tenure_years <= 5 ~ '3-5',
-      tenure_years <= 9 ~ '6-9',
-      tenure_years <= 14 ~ '10-14',
-      tenure_years <= 100 ~ '15+',
-      TRUE ~ NA_character_
-    ))
-applications <- applications %>% left_join(examiner_dates, by = "examiner_id")
-
+  mutate(tenure = case_when(
+    tenure_years <= 1 ~ '<1',
+    tenure_years <= 2 ~ '1-2',
+    tenure_years <= 5 ~ '3-5',
+    tenure_years <= 9 ~ '6-9',
+    tenure_years <= 14 ~ '10-14',
+    tenure_years <= 100 ~ '15+',
+    TRUE ~ NA_character_
+  ))
+  
 
 ### WORKGROUPS
-applications <- applications %>% mutate(examiner_workgroup = str_sub(examiner_art_unit, 1, -2))
+applications <- applications %>% 
+  mutate(examiner_workgroup = str_sub(examiner_art_unit, 1, -2))
 
-
-### CLEAN UP
-rm(examiner_dates, examiner_names, examiner_names_gender, examiner_race, examiner_surnames)
+### DROP NAs
+applications <- applications %>% drop_na(gender, tenure, race)
 
 
 ### EXAMINER DATA
 examiner_data <- applications %>%
-  distinct(examiner_id, examiner_gender = gender, examiner_race = race, examiner_tenure = tenure) 
+  distinct(examiner_id, examiner_gender = gender, 
+           examiner_race = race, examiner_tenure = tenure) 
 
 
 ### WORKGROUPS
-examiner_subset <- applications %>% filter(examiner_workgroup %in% c(166, 160)) %>%
+examiner_subset <- applications %>% 
+  filter(examiner_workgroup %in% c(216, 179)) %>%
   distinct(examiner_id, examiner_workgroup) %>%
   left_join(examiner_data, by='examiner_id')
   
@@ -110,71 +70,165 @@ examiner_subset <- applications %>% filter(examiner_workgroup %in% c(166, 160)) 
 ### COMPARE WORKGROUPS (STATISTICS)
 t_gend <- examiner_subset %>% count(examiner_workgroup, examiner_gender) %>%
   group_by(examiner_workgroup) %>% mutate(freq = n / sum(n) * 100) %>%
-  select(examiner_workgroup, examiner_gender, freq) %>% pivot_wider(names_from = examiner_gender, values_from = freq)
+  select(examiner_workgroup, examiner_gender, freq) %>% 
+  mutate(freq = round(freq, 2)) %>%
+  pivot_wider(names_from = examiner_gender, values_from = freq)
 t_race <- examiner_subset %>% count(examiner_workgroup, examiner_race) %>%
   group_by(examiner_workgroup) %>% mutate(freq = n / sum(n) * 100) %>%
-  select(examiner_workgroup, examiner_race, freq) %>% pivot_wider(names_from = examiner_race, values_from = freq)
+  select(examiner_workgroup, examiner_race, freq) %>% 
+  mutate(freq = round(freq, 2)) %>%
+  pivot_wider(names_from = examiner_race, values_from = freq)
 t_tenure <- examiner_subset %>% count(examiner_workgroup, examiner_tenure) %>%
   group_by(examiner_workgroup) %>% mutate(freq = n / sum(n) * 100) %>%
-  select(examiner_workgroup, examiner_tenure, freq) %>% pivot_wider(names_from = examiner_tenure, values_from = freq)
+  mutate(freq = round(freq, 2)) %>%
+  select(examiner_workgroup, examiner_tenure, freq) %>% 
+  pivot_wider(names_from = examiner_tenure, values_from = freq)
 
 
 ### COMPARE WORKGROUPS (PLOTS)
-p_gend <- ggplot(examiner_subset, aes(x=examiner_gender, y=..prop.., fill=examiner_workgroup, group=examiner_workgroup)) +
+p_gend <- ggplot(examiner_subset, aes(x=examiner_gender, y=..prop.., 
+                                      fill=examiner_workgroup, 
+                                      group=examiner_workgroup)) +
   geom_bar(aes(), stat='count', position='dodge') +
   scale_y_continuous(labels = scales::percent_format())
-p_race <- ggplot(examiner_subset, aes(x=examiner_race, y=..prop.., fill=examiner_workgroup, group=examiner_workgroup)) +
+p_race <- ggplot(examiner_subset, aes(x=examiner_race, y=..prop.., 
+                                      fill=examiner_workgroup, 
+                                      group=examiner_workgroup)) +
   geom_bar(aes(), stat='count', position='dodge') +
   scale_y_continuous(labels = scales::percent_format())
-p_tenure <- ggplot(examiner_subset, aes(x=examiner_tenure, y=..prop.., fill=examiner_workgroup, group=examiner_workgroup)) +
+p_tenure <- ggplot(examiner_subset, aes(x=examiner_tenure, y=..prop.., 
+                                        fill=examiner_workgroup, 
+                                        group=examiner_workgroup)) +
   geom_bar(aes(), stat='count', position='dodge')
 
 
 ### CREATE NETWORK
 edge_subset <- edges %>% 
-  filter(ego_examiner_id %in% examiner_subset$examiner_id |
+  filter(ego_examiner_id %in% examiner_subset$examiner_id &
            alter_examiner_id %in% examiner_subset$examiner_id) %>%
   drop_na() %>% 
-  select(from = ego_examiner_id, to = alter_examiner_id)
-# nodes <- 
+  select(to = ego_examiner_id, from = alter_examiner_id)
 node_subset <- edge_subset %>% 
   pivot_longer(cols=c('from','to')) %>% 
   distinct(examiner_id = value) %>%
-  # left_join(examiner_data, on='examiner_id') %>%
-  # distinct(examiner_id, examiner_gender, examiner_race, examiner_tenure) %>%
-  rename(name = examiner_id)
-network <- tbl_graph(edges = edge_subset)
+  left_join(examiner_data, on='examiner_id') %>%
+  distinct(examiner_id, examiner_gender, examiner_race, examiner_tenure) %>%
+  rename(name = examiner_id) %>%
+  mutate(name = as.character(name))
+network <- graph_from_data_frame(edge_subset, directed = TRUE) %>%
+  as_tbl_graph() %>%
+  left_join(node_subset, by='name')
 
 
 ### ESTIMATE METRICS
-# network <- network %>% 
-#   mutate(degree = centrality_degree(),
-#          closeness = centrality_closeness_harmonic(),
-#          betweenness = centrality_betweenness()) %>%
-#   mutate(avg = (degree + closeness + betweenness)/3) %>%
-#   mutate(label = paste0(name, '\n',
-#                         'Degree: ',round(degree,2), '\n',
-#                         'Closeness: ',round(closeness,2), '\n',
-#                         'Betweenness: ',round(betweenness,2), '\n',
-#                         'Avg: ',round(avg,2)))
-# node_data <- network %>% data.frame() %>% tibble()
-# 
+network <- network %>%
+  mutate(degree = centrality_degree(),
+         betweenness = centrality_betweenness()) %>%
+  mutate(avg = (degree + betweenness)/2) %>%
+  mutate(label = paste0(name, '\n',
+                        'Degree: ',round(degree,2), '\n',
+                        'Betweenness: ',round(betweenness,2), '\n',
+                        'Avg: ',round(avg,2)))
+
 
 ### PLOT NETWORK
+set.seed(1)
+net_gender <- network %>%
+  ggraph(layout="mds") +
+  geom_edge_link(edge_colour = "#d3d3d3", alpha=0.1) +
+  geom_node_point(aes(color=examiner_gender, size=avg)) +
+  theme_void()
+set.seed(1)
+net_race <- network %>%
+  ggraph(layout="mds") +
+  geom_edge_link(edge_colour = "#d3d3d3", alpha=0.1) +
+  geom_node_point(aes(color=examiner_race, size=avg)) +
+  theme_void()
+
+### DISCUSSION
+network_data <- network %>% as.data.frame() %>% as.tibble()
+
+disc_gend_mean <- network_data %>% 
+  group_by(examiner_gender) %>%
+  summarize(mean_degree = mean(degree), 
+            mean_bet = mean(betweenness))
+disc_gend_top_degree <- network_data %>% 
+  arrange(desc(degree)) %>%
+  group_by(examiner_gender) %>%
+  top_frac(0.1, degree) %>%
+  summarize(top10_degree = mean(degree)) %>%
+  mutate(top10_degree = round(top10_degree, 2))
+disc_gend_top_bet <- network_data %>% 
+  arrange(desc(betweenness)) %>%
+  group_by(examiner_gender) %>%
+  top_frac(0.1, betweenness) %>%
+  summarize(top10_bet = mean(betweenness)) %>%
+  mutate(top10_bet = round(top10_bet, 2))
+disc_gend_top <- disc_gend_top_degree %>% 
+  left_join(disc_gend_top_bet, on='examiner_gender')
+disc_gend <- disc_gend_top %>% 
+  left_join(disc_gend_mean, on='examiner_gender')
+
+
+
+disc_race_mean <- network_data %>% 
+  group_by(examiner_race) %>%
+  summarize(mean_degree = mean(degree), 
+            mean_bet = mean(betweenness))
+disc_race_top_degree <- network_data %>% 
+  arrange(desc(degree)) %>%
+  group_by(examiner_race) %>%
+  top_frac(0.1, degree) %>%
+  summarize(top10_degree = mean(degree)) %>%
+  mutate(top10_degree = round(top10_degree, 2))
+disc_race_top_bet <- network_data %>% 
+  arrange(desc(betweenness)) %>%
+  group_by(examiner_race) %>%
+  top_frac(0.1, betweenness) %>%
+  summarize(top10_bet = mean(betweenness)) %>%
+  mutate(top10_bet = round(top10_bet, 2))
+
+disc_race_top <- disc_race_top_degree %>% 
+  left_join(disc_race_top_bet, on='examiner_race')
+disc_race <- disc_race_top %>% 
+  left_join(disc_race_mean, on='examiner_race')
 ```
+
 
 ## Summary Statistics
 
-Workgroups 166 and 160 are evaluated. 
-Workgroup 166 has less women, it has more asian, and it has significantly less employees with 15+ years of tenure.
+Workgroups 216 and 179 are evaluated. 
+- Workgroup 216 has 302 employees, and 179 has 829.
+- Workgroup 216 is more male dominated with 73.5% vs 62.8% for 179.
+- Both workgroup are mostly white and asian employees. With 179 having almost 80% white employees vs 60% for 216.
+- Workgroup 216 generally has employees who worked less than 179
+
 ```{r echo=FALSE}
-t_gend
-t_race
-t_tenure
+kable(t_gend, caption='Gender Distribution')
+kable(t_race, caption='Race Distribution')
+kable(t_tenure, caption='Tenure Distribution')
 grid.arrange(p_gend, p_race, p_tenure)
 ```
 
 
+## Network Visualization
 
+There appears to be two distinct clusters. These clusters are likely base on workgroup.
+- Within each of the 2 clusters there doesn't appear any segregation by gender or by race.
+- This could be due to the non-dominant groups being too small to form their own cluster. 
+- It could also be because the employees are interested in maintaining diverse groups.
+
+```{r echo=FALSE}
+grid.arrange(net_gender, net_race)
+```
+
+## Discussion
+
+```{r echo=FALSE}
+kable(disc_gend, caption='Gender Centrality Scores')
+kable(disc_race,xcaption='Race Centrality Scores')
+```
+
+## Code
 ```{r chunk1, eval=FALSE}
 ```

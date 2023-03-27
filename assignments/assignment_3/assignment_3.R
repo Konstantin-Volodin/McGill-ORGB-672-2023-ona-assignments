@@ -64,7 +64,12 @@ examiner_dates <- examiner_dates %>%
     ))
 applications <- applications %>% left_join(examiner_dates, by = "examiner_id")
 
+
+### LOAD DATA
 applications <- read_parquet(here('assignments','assignment_3',"app_data_clean.parquet"))
+edges <- read_csv(here('assignments','assignment_3',"edges_sample.csv"))
+
+### CLEAN DATA
 applications <- applications %>%
   select(-c('gender.y', 'race.y')) %>% 
   rename(gender = gender.x, race = race.x) %>%
@@ -78,52 +83,62 @@ applications <- applications %>%
     tenure_years <= 100 ~ '15+',
     TRUE ~ NA_character_
   ))
-  
 
 
 ### WORKGROUPS
-applications <- applications %>% mutate(examiner_workgroup = str_sub(examiner_art_unit, 1, -2))
+applications <- applications %>% 
+  mutate(examiner_workgroup = str_sub(examiner_art_unit, 1, -2))
 
 ### DROP NAs
 applications <- applications %>% drop_na(gender, tenure, race)
 
-### CLEAN UP
-rm(examiner_dates, examiner_names, examiner_names_gender, examiner_race, examiner_surnames)
-
 
 ### EXAMINER DATA
 examiner_data <- applications %>%
-  distinct(examiner_id, examiner_gender = gender, examiner_race = race, examiner_tenure = tenure) 
-applications %>% distinct(examiner_id, examiner_workgroup) %>% count(examiner_workgroup) %>% View()
+  distinct(examiner_id, examiner_gender = gender, 
+           examiner_race = race, examiner_tenure = tenure) 
+
 
 ### WORKGROUPS
-examiner_subset <- applications %>% filter(examiner_workgroup %in% c(216, 179)) %>%
+examiner_subset <- applications %>% 
+  filter(examiner_workgroup %in% c(216, 179)) %>%
   distinct(examiner_id, examiner_workgroup) %>%
   left_join(examiner_data, by='examiner_id')
-  
+
 
 ### COMPARE WORKGROUPS (STATISTICS)
 t_gend <- examiner_subset %>% count(examiner_workgroup, examiner_gender) %>%
   group_by(examiner_workgroup) %>% mutate(freq = n / sum(n) * 100) %>%
-  select(examiner_workgroup, examiner_gender, freq) %>% pivot_wider(names_from = examiner_gender, values_from = freq)
+  select(examiner_workgroup, examiner_gender, freq) %>% 
+  mutate(freq = round(freq, 2)) %>%
+  pivot_wider(names_from = examiner_gender, values_from = freq)
 t_race <- examiner_subset %>% count(examiner_workgroup, examiner_race) %>%
   group_by(examiner_workgroup) %>% mutate(freq = n / sum(n) * 100) %>%
-  select(examiner_workgroup, examiner_race, freq) %>% pivot_wider(names_from = examiner_race, values_from = freq)
+  select(examiner_workgroup, examiner_race, freq) %>% 
+  mutate(freq = round(freq, 2)) %>%
+  pivot_wider(names_from = examiner_race, values_from = freq)
 t_tenure <- examiner_subset %>% count(examiner_workgroup, examiner_tenure) %>%
   group_by(examiner_workgroup) %>% mutate(freq = n / sum(n) * 100) %>%
-  select(examiner_workgroup, examiner_tenure, freq) %>% pivot_wider(names_from = examiner_tenure, values_from = freq)
+  mutate(freq = round(freq, 2)) %>%
+  select(examiner_workgroup, examiner_tenure, freq) %>% 
+  pivot_wider(names_from = examiner_tenure, values_from = freq)
 
 
 ### COMPARE WORKGROUPS (PLOTS)
-p_gend <- ggplot(examiner_subset, aes(x=examiner_gender, y=..prop.., fill=examiner_workgroup, group=examiner_workgroup)) +
+p_gend <- ggplot(examiner_subset, aes(x=examiner_gender, y=..prop.., 
+                                      fill=examiner_workgroup, 
+                                      group=examiner_workgroup)) +
   geom_bar(aes(), stat='count', position='dodge') +
   scale_y_continuous(labels = scales::percent_format())
-p_race <- ggplot(examiner_subset, aes(x=examiner_race, y=..prop.., fill=examiner_workgroup, group=examiner_workgroup)) +
+p_race <- ggplot(examiner_subset, aes(x=examiner_race, y=..prop.., 
+                                      fill=examiner_workgroup, 
+                                      group=examiner_workgroup)) +
   geom_bar(aes(), stat='count', position='dodge') +
   scale_y_continuous(labels = scales::percent_format())
-p_tenure <- ggplot(examiner_subset, aes(x=examiner_tenure, y=..prop.., fill=examiner_workgroup, group=examiner_workgroup)) +
+p_tenure <- ggplot(examiner_subset, aes(x=examiner_tenure, y=..prop.., 
+                                        fill=examiner_workgroup, 
+                                        group=examiner_workgroup)) +
   geom_bar(aes(), stat='count', position='dodge')
-grid.arrange(p_gend, p_race, p_tenure)
 
 
 ### CREATE NETWORK
@@ -156,7 +171,6 @@ network <- network %>%
 
 
 ### PLOT NETWORK
-# plot <- 
 set.seed(1)
 net_gender <- network %>%
   ggraph(layout="mds") +
@@ -189,8 +203,10 @@ disc_gend_top_bet <- network_data %>%
   group_by(examiner_gender) %>%
   top_frac(0.1, betweenness) %>%
   summarize(top10_bet = mean(betweenness))
-disc_gend_top <- disc_gend_top_degree %>% left_join(disc_gend_top_bet, on='examiner_gender')
-disc_gend <- disc_gend_top %>% left_join(disc_gend_mean, on='examiner_gender')
+disc_gend_top <- disc_gend_top_degree %>% 
+  left_join(disc_gend_top_bet, on='examiner_gender')
+disc_gend <- disc_gend_top %>% 
+  left_join(disc_gend_mean, on='examiner_gender')
 
 
 
@@ -198,7 +214,6 @@ disc_race_mean <- network_data %>%
   group_by(examiner_race) %>%
   summarize(mean_degree = mean(degree), 
             mean_bet = mean(betweenness))
-
 disc_race_top_degree <- network_data %>% 
   arrange(desc(degree)) %>%
   group_by(examiner_race) %>%
@@ -210,5 +225,7 @@ disc_race_top_bet <- network_data %>%
   top_frac(0.1, betweenness) %>%
   summarize(top10_bet = mean(betweenness))
 
-disc_race_top <- disc_race_top_degree %>% left_join(disc_race_top_bet, on='examiner_race')
-disc_race <- disc_race_top %>% left_join(disc_race_mean, on='examiner_race')
+disc_race_top <- disc_race_top_degree %>% 
+  left_join(disc_race_top_bet, on='examiner_race')
+disc_race <- disc_race_top %>% 
+  left_join(disc_race_mean, on='examiner_race')
