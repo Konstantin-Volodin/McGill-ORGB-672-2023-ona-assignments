@@ -140,15 +140,9 @@ network <- network %>%
 ### PLOT NETWORK
 # plot <- 
 set.seed(1)
-net_betweeness <- network %>%
-  ggraph(layout="circlepack") +
-  geom_edge_link(edge_colour = "#d3d3d3") +
-  geom_node_point(aes(color=examiner_gender, size=betweenness)) +
+net_avg <- network %>%
+  ggraph(layout="mds") +
+  geom_edge_link(edge_colour = "#d3d3d3", alpha=0.1) +
+  geom_node_point(aes(color=examiner_gender, size=avg)) +
   theme_void()
-set.seed(1)
-net_degree <- network %>%
-  ggraph(layout="circlepack") +
-  geom_edge_link(edge_colour = "#d3d3d3") +
-  geom_node_point(aes(color=examiner_gender, size=degree)) +
-  theme_void()
-grid.arrange(net_betweeness, net_degree)
+net_avg
