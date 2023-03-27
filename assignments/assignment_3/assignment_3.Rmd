@@ -198,10 +198,11 @@ disc_race <- disc_race_top %>%
 ## Summary Statistics
 
 Workgroups 216 and 179 are evaluated. 
+
 - Workgroup 216 has 302 employees, and 179 has 829.
 - Workgroup 216 is more male dominated with 73.5% vs 62.8% for 179.
 - Both workgroup are mostly white and asian employees. With 179 having almost 80% white employees vs 60% for 216.
-- Workgroup 216 generally has employees who worked less than 179
+- Workgroup 216 generally has employees who have lower tenure than 179
 
 ```{r echo=FALSE}
 kable(t_gend, caption='Gender Distribution')
@@ -214,15 +215,21 @@ grid.arrange(p_gend, p_race, p_tenure)
 ## Network Visualization
 
 There appears to be two distinct clusters. These clusters are likely base on workgroup.
+
 - Within each of the 2 clusters there doesn't appear any segregation by gender or by race.
 - This could be due to the non-dominant groups being too small to form their own cluster. 
 - It could also be because the employees are interested in maintaining diverse groups.
 
 ```{r echo=FALSE}
-grid.arrange(net_gender, net_race)
+net_gender
+net_race
 ```
 
 ## Discussion
+Looking at degree and betweenness centrality for each gender and race the following are results.
+
+- Gender generally performs very similarly in the centrality scores suggesting there is no discrimination based on that. The differences are likely due to women having a smaller population
+- Race seems to play a larger role in clustering. It appears black and hispanic people tend to cluster together more. Whereas asian people tend to be the brokers in the network. 
 
 ```{r echo=FALSE}
 kable(disc_gend, caption='Gender Centrality Scores')

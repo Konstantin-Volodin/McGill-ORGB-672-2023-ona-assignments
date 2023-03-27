@@ -1,10 +1,12 @@
 ## Summary Statistics
 
-Workgroups 216 and 179 are evaluated. Workgroup 216 has 302 employees,
-and 179 has 829. Workgroup 216 is more male dominated with 73.5% vs
-62.8% for 179. Both workgroup are mostly white and asian employees. With
-179 having almost 80% white employees vs 60% for 216. Workgroup 216
-generally has employees who worked less than 179
+Workgroups 216 and 179 are evaluated.
+
+-   Workgroup 216 has 302 employees, and 179 has 829.
+-   Workgroup 216 is more male dominated with 73.5% vs 62.8% for 179.
+-   Both workgroup are mostly white and asian employees. With 179 having
+    almost 80% white employees vs 60% for 216.
+-   Workgroup 216 generally has employees who have lower tenure than 179
 
 <table>
 <caption>Gender Distribution</caption>
@@ -110,18 +112,33 @@ Tenure Distribution
 ## Network Visualization
 
 There appears to be two distinct clusters. These clusters are likely
-base on workgroup however. Within each of the 2 clusters however there
-doesn’t appear any segregation by gender or by race. This could be due
-to the non-dominant groups being too small to form their own cluster. Or
-it could be because the employees are interested in maintaining diverse
-groups.
+base on workgroup.
+
+-   Within each of the 2 clusters there doesn’t appear any segregation
+    by gender or by race.
+-   This could be due to the non-dominant groups being too small to form
+    their own cluster.
+-   It could also be because the employees are interested in maintaining
+    diverse groups.
+
+<!-- -->
 
     ## Warning: Using the `size` aesthetic in this geom was deprecated in ggplot2 3.4.0.
     ## ℹ Please use `linewidth` in the `default_aes` field and elsewhere instead.
 
-![](assignment_3_files/figure-markdown_strict/unnamed-chunk-2-1.png)
+![](assignment_3_files/figure-markdown_strict/unnamed-chunk-2-1.png)![](assignment_3_files/figure-markdown_strict/unnamed-chunk-2-2.png)
 
 ## Discussion
+
+Looking at degree and betweenness centrality for each gender and race
+the following are results.
+
+-   Gender generally performs very similarly in the centrality scores
+    suggesting there is no discrimination based on that. The differences
+    are likely due to women having a smaller population
+-   Race seems to play a larger role in clustering. It appears black and
+    hispanic people tend to cluster together more. Whereas asian people
+    tend to be the brokers in the network.
 
 <table>
 <caption>Gender Centrality Scores</caption>
@@ -137,15 +154,15 @@ groups.
 <tbody>
 <tr class="odd">
 <td style="text-align: left;">female</td>
-<td style="text-align: right;">30.78947</td>
-<td style="text-align: right;">74.14260</td>
+<td style="text-align: right;">30.79</td>
+<td style="text-align: right;">74.14</td>
 <td style="text-align: right;">5.010417</td>
 <td style="text-align: right;">7.985249</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">male</td>
-<td style="text-align: right;">32.53191</td>
-<td style="text-align: right;">82.60917</td>
+<td style="text-align: right;">32.53</td>
+<td style="text-align: right;">82.61</td>
 <td style="text-align: right;">5.674641</td>
 <td style="text-align: right;">8.894336</td>
 </tr>
@@ -155,7 +172,6 @@ groups.
 Gender Centrality Scores
 
 <table>
-<caption>Race Centrality Scores</caption>
 <thead>
 <tr class="header">
 <th style="text-align: left;">examiner_race</th>
@@ -168,36 +184,34 @@ Gender Centrality Scores
 <tbody>
 <tr class="odd">
 <td style="text-align: left;">Asian</td>
-<td style="text-align: right;">24.46154</td>
-<td style="text-align: right;">161.73846</td>
+<td style="text-align: right;">24.46</td>
+<td style="text-align: right;">161.74</td>
 <td style="text-align: right;">4.352941</td>
 <td style="text-align: right;">15.92577</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">black</td>
-<td style="text-align: right;">60.00000</td>
-<td style="text-align: right;">5.00000</td>
+<td style="text-align: right;">60.00</td>
+<td style="text-align: right;">5.00</td>
 <td style="text-align: right;">7.222222</td>
 <td style="text-align: right;">0.50000</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Hispanic</td>
-<td style="text-align: right;">45.00000</td>
-<td style="text-align: right;">0.00000</td>
+<td style="text-align: right;">45.00</td>
+<td style="text-align: right;">0.00</td>
 <td style="text-align: right;">7.000000</td>
 <td style="text-align: right;">0.00000</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">white</td>
-<td style="text-align: right;">35.15556</td>
-<td style="text-align: right;">67.25883</td>
+<td style="text-align: right;">35.16</td>
+<td style="text-align: right;">67.26</td>
 <td style="text-align: right;">5.686230</td>
 <td style="text-align: right;">6.94378</td>
 </tr>
 </tbody>
 </table>
-
-Race Centrality Scores
 
 ## Code
 
@@ -331,12 +345,14 @@ Race Centrality Scores
       arrange(desc(degree)) %>%
       group_by(examiner_gender) %>%
       top_frac(0.1, degree) %>%
-      summarize(top10_degree = mean(degree))
+      summarize(top10_degree = mean(degree)) %>%
+      mutate(top10_degree = round(top10_degree, 2))
     disc_gend_top_bet <- network_data %>% 
       arrange(desc(betweenness)) %>%
       group_by(examiner_gender) %>%
       top_frac(0.1, betweenness) %>%
-      summarize(top10_bet = mean(betweenness))
+      summarize(top10_bet = mean(betweenness)) %>%
+      mutate(top10_bet = round(top10_bet, 2))
     disc_gend_top <- disc_gend_top_degree %>% 
       left_join(disc_gend_top_bet, on='examiner_gender')
     disc_gend <- disc_gend_top %>% 
@@ -352,12 +368,14 @@ Race Centrality Scores
       arrange(desc(degree)) %>%
       group_by(examiner_race) %>%
       top_frac(0.1, degree) %>%
-      summarize(top10_degree = mean(degree))
+      summarize(top10_degree = mean(degree)) %>%
+      mutate(top10_degree = round(top10_degree, 2))
     disc_race_top_bet <- network_data %>% 
       arrange(desc(betweenness)) %>%
       group_by(examiner_race) %>%
       top_frac(0.1, betweenness) %>%
-      summarize(top10_bet = mean(betweenness))
+      summarize(top10_bet = mean(betweenness)) %>%
+      mutate(top10_bet = round(top10_bet, 2))
 
     disc_race_top <- disc_race_top_degree %>% 
       left_join(disc_race_top_bet, on='examiner_race')
