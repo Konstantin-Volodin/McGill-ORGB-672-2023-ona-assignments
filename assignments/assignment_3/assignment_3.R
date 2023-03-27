@@ -64,10 +64,28 @@ examiner_dates <- examiner_dates %>%
     ))
 applications <- applications %>% left_join(examiner_dates, by = "examiner_id")
 
+applications <- read_parquet(here('assignments','assignment_3',"app_data_clean.parquet"))
+applications <- applications %>%
+  select(-c('gender.y', 'race.y')) %>% 
+  rename(gender = gender.x, race = race.x) %>%
+  mutate(tenure_years = tenure_days / 365) %>%
+  mutate(tenure = case_when(
+    tenure_years <= 1 ~ '<1',
+    tenure_years <= 2 ~ '1-2',
+    tenure_years <= 5 ~ '3-5',
+    tenure_years <= 9 ~ '6-9',
+    tenure_years <= 14 ~ '10-14',
+    tenure_years <= 100 ~ '15+',
+    TRUE ~ NA_character_
+  ))
+  
+
 
 ### WORKGROUPS
 applications <- applications %>% mutate(examiner_workgroup = str_sub(examiner_art_unit, 1, -2))
 
+### DROP NAs
+applications <- applications %>% drop_na(gender, tenure, race)
 
 ### CLEAN UP
 rm(examiner_dates, examiner_names, examiner_names_gender, examiner_race, examiner_surnames)
@@ -110,7 +128,7 @@ grid.arrange(p_gend, p_race, p_tenure)
 
 ### CREATE NETWORK
 edge_subset <- edges %>% 
-  filter(ego_examiner_id %in% examiner_subset$examiner_id |
+  filter(ego_examiner_id %in% examiner_subset$examiner_id &
            alter_examiner_id %in% examiner_subset$examiner_id) %>%
   drop_na() %>% 
   select(to = ego_examiner_id, from = alter_examiner_id)
@@ -140,13 +158,57 @@ network <- network %>%
 ### PLOT NETWORK
 # plot <- 
 set.seed(1)
-net_avg <- network %>%
+net_gender <- network %>%
   ggraph(layout="mds") +
   geom_edge_link(edge_colour = "#d3d3d3", alpha=0.1) +
   geom_node_point(aes(color=examiner_gender, size=avg)) +
   theme_void()
-net_avg
+set.seed(1)
+net_race <- network %>%
+  ggraph(layout="mds") +
+  geom_edge_link(edge_colour = "#d3d3d3", alpha=0.1) +
+  geom_node_point(aes(color=examiner_race, size=avg)) +
+  theme_void()
+grid.arrange(net_gender, net_race)
 
 
 ### DISCUSSION
 network_data <- network %>% as.data.frame() %>% as.tibble()
+
+disc_gend_mean <- network_data %>% 
+  group_by(examiner_gender) %>%
+  summarize(mean_degree = mean(degree), 
+            mean_bet = mean(betweenness))
+disc_gend_top_degree <- network_data %>% 
+  arrange(desc(degree)) %>%
+  group_by(examiner_gender) %>%
+  top_frac(0.1, degree) %>%
+  summarize(top10_degree = mean(degree))
+disc_gend_top_bet <- network_data %>% 
+  arrange(desc(betweenness)) %>%
+  group_by(examiner_gender) %>%
+  top_frac(0.1, betweenness) %>%
+  summarize(top10_bet = mean(betweenness))
+disc_gend_top <- disc_gend_top_degree %>% left_join(disc_gend_top_bet, on='examiner_gender')
+disc_gend <- disc_gend_top %>% left_join(disc_gend_mean, on='examiner_gender')
+
+
+
+disc_race_mean <- network_data %>% 
+  group_by(examiner_race) %>%
+  summarize(mean_degree = mean(degree), 
+            mean_bet = mean(betweenness))
+
+disc_race_top_degree <- network_data %>% 
+  arrange(desc(degree)) %>%
+  group_by(examiner_race) %>%
+  top_frac(0.1, degree) %>%
+  summarize(top10_degree = mean(degree))
+disc_race_top_bet <- network_data %>% 
+  arrange(desc(betweenness)) %>%
+  group_by(examiner_race) %>%
+  top_frac(0.1, betweenness) %>%
+  summarize(top10_bet = mean(betweenness))
+
+disc_race_top <- disc_race_top_degree %>% left_join(disc_race_top_bet, on='examiner_race')
+disc_race <- disc_race_top %>% left_join(disc_race_mean, on='examiner_race')
