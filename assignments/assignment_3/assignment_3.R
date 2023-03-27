@@ -146,3 +146,7 @@ net_avg <- network %>%
   geom_node_point(aes(color=examiner_gender, size=avg)) +
   theme_void()
 net_avg
+
+
+### DISCUSSION
+network_data <- network %>% as.data.frame() %>% as.tibble()
