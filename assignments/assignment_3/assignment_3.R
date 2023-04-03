@@ -65,26 +65,6 @@ examiner_dates <- examiner_dates %>%
 applications <- applications %>% left_join(examiner_dates, by = "examiner_id")
 
 
-### LOAD DATA
-applications <- read_parquet(here('assignments','assignment_3',"app_data_clean.parquet"))
-edges <- read_csv(here('assignments','assignment_3',"edges_sample.csv"))
-
-### CLEAN DATA
-applications <- applications %>%
-  select(-c('gender.y', 'race.y')) %>% 
-  rename(gender = gender.x, race = race.x) %>%
-  mutate(tenure_years = tenure_days / 365) %>%
-  mutate(tenure = case_when(
-    tenure_years <= 1 ~ '<1',
-    tenure_years <= 2 ~ '1-2',
-    tenure_years <= 5 ~ '3-5',
-    tenure_years <= 9 ~ '6-9',
-    tenure_years <= 14 ~ '10-14',
-    tenure_years <= 100 ~ '15+',
-    TRUE ~ NA_character_
-  ))
-
-
 ### WORKGROUPS
 applications <- applications %>% 
   mutate(examiner_workgroup = str_sub(examiner_art_unit, 1, -2))
@@ -229,3 +209,10 @@ disc_race_top <- disc_race_top_degree %>%
   left_join(disc_race_top_bet, on='examiner_race')
 disc_race <- disc_race_top %>% 
   left_join(disc_race_mean, on='examiner_race')
+
+
+### SAVE DATA
+applications %>% write_parquet(here('assignments', 'assignment_3', 'clean_applications.parquet'))
+edges %>% write_parquet(here('assignments', 'assignment_3', 'clean_edges.parquet'))
+examiner_data %>% write_parquet(here('assignments', 'assignment_3', 'clean_examiner.parquet'))
+examiner_subset %>% write_parquet(here('assignments', 'assignment_3', 'clean_workgroups.parquet'))
