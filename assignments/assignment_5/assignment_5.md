@@ -1,0 +1,71 @@
+## Complex vs Simple Contagion
+
+In network science, contagion refers to the process by which an idea
+spreads through a network of individuals. Complex and simple contagion
+are ways to describe how such an idea spreads.
+
+Simple contagion is a type of contagion where the spread only requires
+one exposure to it. In other words, a single contact is enough to make
+someone else adopt it. Complex contagion is a type of contagion where
+the spread of the idea requires multiple exposures or requires a minimum
+portion of individual’s network to also support it In other words, it’s
+not enough for just one person to exhibit the idea, but rather a
+threshold must be reached before the idea will spread.
+
+Overall, the difference between simple and complex contagion lies in the
+number of exposures required for the idea to spread, with simple
+contagion requiring only one exposure and complex contagion requiring
+multiple exposures or a critical mass.
+
+## Complex Contagion for Diffusion of Ideas
+
+Complex contagion has important implications for the diffusion of
+behaviors in organizations. In particular, complex contagion implies
+that the effective spread of behaviors or ideas may require a
+intentionally designed organizational structure that might not emerge
+naturally.
+
+If the network is too densely connected, this can lead to a phenomenon
+called “group think”, where individuals in the organization become so
+tightly connected that outside ideas do not get enough consideration or
+critical mass to succeed. On the other hand, if the network is not
+connected enough, this can hinder the spread of ideas altogether, as
+some pockets of people may not be exposed to a certain idea.
+
+An idea of a small world network can help facilitate the spread of ideas
+throughout organizations. Small world networks are defined as a good mix
+of interconnected networks and connections between clusters. This allows
+for the diffusion of behaviors and ideas to spread more widely through
+the network, allowing effective organizational change.
+
+In summary, complex contagion suggests that the spread of behaviors and
+ideas in organizations may require an intentional organizational design
+rather than the naturally emerging one. A small world network is what
+the leaders of organizations should strive to create.
+
+## Threshold Models for Managing Organizational Behaviour
+
+Threshold models are a useful tool for understanding how behaviors
+spread through networks. In these models, individuals have a threshold
+for adopting a particular behavior, and they will only adopt the
+behavior if enough of their neighbors have already adopted it.
+
+In the case of prosocial behavior, we can use threshold models to
+identify individuals in the network who are most likely to adopt and
+spread prosocial behaviors. By targeting these individuals, we can
+increase the likelihood that prosocial behaviors will spread throughout
+the organization.
+
+In the case of learning, threshold models can help us understand how new
+ideas and knowledge spread through the network. By identifying
+individuals who have a low threshold for adopting new ideas, we can
+target them for training and development programs, which can help to
+spread new knowledge and ideas throughout the organization more quickly
+and effectively.
+
+Finally, in the case of toxic or unproductive behaviors, threshold
+models can help us identify individuals who are most likely to exhibit
+or spread these behaviors. By targeting these individuals for
+interventions such as coaching or counseling, we can mitigate the
+negative effects of these behaviors and prevent them from spreading
+throughout the organization.
