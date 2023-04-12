@@ -66,7 +66,6 @@ examiner_dates <- examiner_dates %>%
 applications <- applications %>% left_join(examiner_dates, by = "examiner_id")
 
 
-
 ### WORKGROUPS
 applications <- applications %>% 
   mutate(examiner_workgroup = str_sub(examiner_art_unit, 1, -2))
