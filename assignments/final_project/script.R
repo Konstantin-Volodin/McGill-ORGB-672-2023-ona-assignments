@@ -65,13 +65,79 @@ examiner_dates <- examiner_dates %>%
   ))
 applications <- applications %>% left_join(examiner_dates, by = "examiner_id")
 
+### SAVE DATA
+applications %>% write_parquet(here(data_path, 'clean_applications.parquet'))
+edges %>% write_parquet(here(data_path, 'clean_edges.parquet'))
+
+
+
+
+
+### READ DATA
+applications <- read_parquet(here(data_path, 'clean_applications.parquet'))
+edges <- read_parquet(here(data_path, 'clean_edges.parquet'))
 
 ### WORKGROUPS
 applications <- applications %>% 
   mutate(examiner_workgroup = str_sub(examiner_art_unit, 1, -2))
 
 
+### EXAMINER DATA
+examiner_data <- applications %>%
+  distinct(examiner_id, examiner_gender = gender, 
+           examiner_race = race, examiner_tenure = tenure) 
 
-### SAVE DATA
-applications %>% write_parquet(here(data_path, 'clean_applications.parquet'))
-edges %>% write_parquet(here(data_path, 'clean_edges.parquet'))
+
+
+
+### CREATE NETWORK
+edge_subset <- edges %>% 
+  select(to = ego_examiner_id, from = alter_examiner_id) %>%
+  drop_na()
+node_subset <- edge_subset %>% 
+  pivot_longer(cols=c('from','to')) %>% 
+  distinct(examiner_id = value) %>%
+  left_join(examiner_data, on='examiner_id') %>%
+  distinct(examiner_id, examiner_gender, examiner_race, examiner_tenure) %>%
+  rename(name = examiner_id) %>%
+  mutate(name = as.character(name))
+network <- graph_from_data_frame(edge_subset, directed = TRUE) %>%
+  as_tbl_graph() %>%
+  left_join(node_subset, by='name')
+
+
+### VISUALIZE
+# network %>%
+#   ggraph(layout="mds") +
+#   geom_edge_link(edge_colour = "#d3d3d3", alpha=0.1) +
+#   geom_node_point() +
+#   theme_void()
+
+
+### ESTIMATE CENTRALITY SCORES
+
+
+
+
+### CREATE IDEA RANDOM DATA
+threshold <- 0.2
+network <- network %>%
+  mutate(idea_support = rbinom(dim(as.tibble(network))[1], 1, 0.1))
+
+
+### 
+init_net <- network %>% 
+  activate(edges) %>%
+  as_tibble
+
+### https://eehh-stanford.github.io/SNA-workshop/ergm-intro.html 
+### interesting topic
+
+
+### ESTIMATE STATS
+network %>% 
+  as_tibble() %>% 
+  count(examiner_gender, idea_support)
+
+
+
