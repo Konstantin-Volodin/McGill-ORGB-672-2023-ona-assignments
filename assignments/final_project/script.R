@@ -69,3 +69,9 @@ applications <- applications %>% left_join(examiner_dates, by = "examiner_id")
 ### WORKGROUPS
 applications <- applications %>% 
   mutate(examiner_workgroup = str_sub(examiner_art_unit, 1, -2))
+
+
+
+### SAVE DATA
+applications %>% write_parquet(here(data_path, 'clean_applications.parquet'))
+edges %>% write_parquet(here(data_path, 'clean_edges.parquet'))
