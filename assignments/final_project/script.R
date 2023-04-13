@@ -130,9 +130,14 @@ init_net <- network %>%
   activate(edges) %>%
   as_tibble
 
-### https://eehh-stanford.github.io/SNA-workshop/ergm-intro.html 
 ### interesting topic
+### https://eehh-stanford.github.io/SNA-workshop/ergm-intro.html 
 
+### diffusion simulation
+### https://dshizuka.github.io/networkanalysis/08_diffusion.html
+
+### looks useful
+### https://dshizuka.github.io/networkanalysis/tutorials.html
 
 ### ESTIMATE STATS
 network %>% 
