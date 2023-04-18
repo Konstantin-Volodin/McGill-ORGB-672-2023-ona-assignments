@@ -11,7 +11,7 @@ output:
     toc: true
     toc_depth: 2
     number_sections: true
-    dev: png=
+    dev: jpeg
 header-includes: 
   - \renewcommand{\and}{\\}
 ---
