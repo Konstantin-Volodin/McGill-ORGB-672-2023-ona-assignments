@@ -273,7 +273,9 @@ complete_simulation_run <- function(seed, thresh, node_subset, examiner_data, ne
 
 
 ### MULTIPROCESSING
-thresh <- seq(0.1, 0.5, by=0.01)
+thresh1 <- seq(0.1, 0.5, by=0.01)
+thresh2 <- seq(0.6, 0.9, by=0.1)
+thresh <- c(thresh1, thresh2)
 final_res <- tibble()
 
 cores=detectCores()
@@ -299,3 +301,4 @@ final_res %>% write_parquet(here(data_path, 'results.parquet'))
 # 
 # ### looks useful
 # ### https://dshizuka.github.io/networkanalysis/tutorials.html 
+

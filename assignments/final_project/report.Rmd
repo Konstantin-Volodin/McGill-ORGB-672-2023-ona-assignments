@@ -1,0 +1,259 @@
+---
+title: "Report"
+author: 
+  - Adityo
+  - Sara
+  - Konstantin
+  - Utkarsh
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    dev: png=
+header-includes: 
+  - \renewcommand{\and}{\\}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(arrow)
+library(tidyverse)
+library(igraph)
+library(tidygraph)
+library(ggraph)
+library(gridExtra)
+library(cowplot)
+library(plotly)
+```
+
+```{r load_data, include=FALSE}
+### PREPARE DATA
+##### LOAD
+data_path <- here('assignments', 'final_project', '672_project_data')
+results <- read_parquet(here(data_path, 'results.parquet'))
+applications <- read_parquet(here(data_path, 'clean_applications.parquet'))
+edges <- read_parquet(here(data_path, 'clean_edges.parquet'))
+examiner_data <- read_parquet(here(data_path, 'clean_examiner.parquet')) %>% rename(name = examiner_id)
+examiner_wg_data <- read_parquet(here(data_path, 'clean_examiner_wg.parquet')) %>% rename(name = examiner_id)
+```
+
+```{r default_net, include=FALSE, cache=TRUE}
+##### GET SOME WORKGROUPS ONLY
+wgs <- c(216)
+exm_wgs <- examiner_wg_data %>% filter(examiner_workgroup %in% wgs) %>% distinct(name) %>% pull(name)
+ 
+##### NETWORK
+edge_subset <- edges %>% select(to = ego_examiner_id, from = alter_examiner_id) %>%
+  filter(to %in% exm_wgs & from %in% exm_wgs) %>% 
+  mutate(to = as.character(to), from = as.character(from)) %>% drop_na()
+node_subset <- edge_subset %>% pivot_longer(cols=c('from','to')) %>% distinct(examiner_id = value) %>% 
+  rename(name = examiner_id) %>% mutate(name = as.character(name))
+network <- tbl_graph(node_subset, edge_subset, directed=FALSE)
+network <- network %>% left_join(examiner_data, on='name')
+network <- network %>% mutate(examiner_race = case_when(examiner_race == 'white' ~ 'white', is.na(examiner_race) ~ examiner_race, TRUE ~ 'non-white'))
+``` 
+
+```{r summ_results, include=FALSE, cache=TRUE}
+##### RESULTS
+summary <- results %>%
+  group_by(timestep, desc, thresh) %>%
+  summarize(adoption = mean(value)) %>%
+  ungroup()
+```
+
+```{r detailed_evo_data, include=FALSE, cache = TRUE}
+##### DETAILED EVOLUTION
+net_rnd_10 <- results %>% filter(desc == 'random_start' & thresh == 0.1 & repl == 1)
+net_rnd_25 <- results %>% filter(desc == 'random_start' & thresh == '0.3' & repl == 1)
+net_rnd_50 <- results %>% filter(desc == 'random_start' & thresh == 0.6 & repl == 1)
+net_male_25 <- results %>% filter(desc == 'male_start' & thresh == '0.3' & repl == 1)
+net_female_25 <- results %>% filter(desc == 'female_start' & thresh == '0.3' & repl == 1)
+net_white_25 <- results %>% filter(desc == 'white_start' & thresh == '0.3' & repl == 1)
+net_nonwhite_25 <- results %>% filter(desc == 'non_white_start' & thresh == '0.3' & repl == 1)
+net_deg_25 <- results %>% filter(desc == 'top_10_degree_start' & thresh == '0.3' & repl == 1)
+net_betw_25 <- results %>% filter(desc == 'top_10_betw_start' & thresh == '0.3' & repl == 1)
+rm(results)
+```
+
+```{r init_vis, include=FALSE, cache = TRUE}
+### VISUALIZATIONS
+##### GENDER
+set.seed(1)
+p1a <- network %>% ggraph(layout="mds") +
+  geom_edge_link(edge_colour = "#d3d3d3", alpha=0.3) +
+  geom_node_point(aes(color=examiner_gender)) +
+  theme_void()
+set.seed(1)
+p1b <- network %>% ggraph(layout="mds") +
+  geom_edge_link(edge_colour = "#d3d3d3", alpha=0.3) +
+  geom_node_point(aes(color=examiner_race)) +
+  theme_void()
+grid.arrange(p1a,p1b)
+```
+
+```{r thresh_vis, include=FALSE, cache = TRUE}
+##### THRESHOLD VISUALIZATIONS
+thresh_vis <- function(desc_filter, description, timestep_fl) {
+  p <- ggplot(summary %>% filter(desc ==  desc_filter & timestep <= timestep_fl), 
+              aes(x=timestep, y=adoption, color=thresh, group=thresh)) +
+    geom_line() +
+    labs(title = description, x = "Timestep", y = "Spread") +
+    scale_color_gradient(low = "green", high = "red") +
+    theme_minimal() +
+    theme(text = element_text(size = 10)) +
+    ylim(0,1)
+}
+p21a <- thresh_vis('random_start', 'No Bias Random Start', 20)
+p31a <- thresh_vis('male_start', 'Male Random Start', 20)
+p31b <- thresh_vis('female_start', 'Female Random Start', 20)
+p32a <- thresh_vis('white_start', 'White Random Start', 20)
+p32b <- thresh_vis('non_white_start', 'Non White Random Start', 20)
+p33a <- thresh_vis('top_10_degree_start', 'Top 10 Degree Centrality', 20)
+p33b <- thresh_vis('bot_10_degree_start', 'Bottom 10 Degree Centrality', 20)
+p34a <- thresh_vis('top_10_betw_start', 'Top 10 Betweenness Centrality', 20)
+p34b <- thresh_vis('bot_10_betw_start', 'Bottom 10 Betweenness Centrality', 20)
+```
+
+```{r net_evo_vis, include=FALSE, cache = TRUE}
+##### NETWORK EVOLUTION VISUALIZATION
+evol_vis <- function(data, description, timesteps) {
+  title <- ggdraw() + draw_label(description, x = 0, hjust = 0) + 
+    theme(text = element_text(size = 6), plot.margin = margin(0, 0, 0, 7))
+  p <- list()
+  for (ii in 0:timesteps) {
+    set.seed(1)
+    nt <- data %>% filter(timestep == ii) %>% select(name, idea=value)
+    nt <- network %>% left_join(nt, on='name')
+    p[[ii+1]] <- nt %>% ggraph(layout="mds") +
+      geom_edge_link(edge_colour = "#d3d3d3", alpha=0.3) +
+      geom_node_point(aes(color=idea)) +
+      ggtitle(paste0("Timestep: ", ii)) +
+      theme_void() +
+      theme(text = element_text(size = 8), legend.position = "none")
+  }
+  p <- plot_grid(plotlist=p)
+  return(plot_grid(title, p, ncol=1, rel_heights = c(0.05, 1)))
+}
+p21b <- evol_vis(net_rnd_10, 'Random Start - 10% Threshold', 10)
+p21c <- evol_vis(net_rnd_25, 'Random Start - 30% Threshold', 10)
+p21d <- evol_vis(net_rnd_50, 'Random Start - 60% Threshold', 10)
+p31c <- evol_vis(net_male_25, 'Male Start - 30% Threshold', 10)
+p31d <- evol_vis(net_female_25, 'Female Start - 30% Threshold', 10)
+p32c <- evol_vis(net_white_25, 'White Start - 30% Threshold', 10)
+p32d <- evol_vis(net_nonwhite_25, 'Non White Start - 30% Threshold', 10)
+p33c <- evol_vis(net_deg_25, 'Top 10 Degree Centrality - 30% Threshold', 10)
+p34c <- evol_vis(net_betw_25, 'Top 10 Betweenness Centrality - 30% Threshold', 10)
+```
+
+# Approach
+
+The threshold model is a classic and simple approach used to study the spread of contagion in complex social systems. In our investigation, we explore the effects of multiple initiators on the dynamics of threshold-limited cascades, considering different levels thresholds that range from 10% to 90%. To capture the complexity of social influence, we use a normal distribution to assign the initiator nodes and analyze the cascade behavior numerically and analytically. We also try to incorporate demographic biases such as race and gender as well as network analysis measures like closeness and degree centrality to make our analysis as pragmatic as possible. 
+
+Interestingly, we observe a non-monotonic change in the cascade size as we vary the standard deviation of the threshold distribution. When there is a sufficiently large spread in the threshold distribution, the tipping-point behavior, which is characteristic of the social influencing process, disappears and is replaced by a smooth crossover that is influenced by the size of the initiator set. 
+
+Furthermore, we find that for a given size of the initiator set, there is a specific variance of the threshold distribution that optimally facilitates the spread of opinion. Additionally, we show that the spread becomes independent of the system size as it approaches asymptotic behavior, and that global cascades can be triggered by the addition of just a single node to the initiator set. 
+
+Our findings highlight the intricate dynamics of threshold-limited cascades in the presence of multiple initiators and shed light on the optimal conditions for opinion spread in social networks, providing insights into the interplay between initiator characteristics, threshold distribution, and cascade size.  
+
+Our research focused on two workgroups from the UTSPO dataset, specifically workgroup 216, which encompasses areas such as Food, Analytical Chemistry, Sterilization, Biochemistry, and Electrochemistry. The code is designed to be flexible, allowing for the analysis of any other workgroups within the dataset as needed. 
+
+
+
+
+
+# Bias independent diffusion
+
+## Random Initiators
+
+Assuming the initiators can belong to any gender or race and thresholds ranging from 10% to 90% with a step of 10 we observed how an idea is propagated within the population 
+
+The idea spreads quicker and to a larger extent when people are more likely to be influenced by their peers. We further visualize the diffusion at thresholds 10%, 30% and 60%. 
+
+```{r echo=FALSE, fig.align="center", fig.width=6, fig.height=3}
+p21a
+```
+
+```{r echo=FALSE, fig.align="center", fig.width=10, fig.height=3}
+plot_grid(p21b, p21c, p21d, scale=0.9, nrow=1)
+```
+
+
+
+
+
+# Bias induced diffusion 
+
+Intergroup bias, which refers to the favoritism or prejudice that individuals exhibit towards their own group while showing discrimination or negativity towards other groups, can significantly impact the dynamics of information and behavior spread in complex contagion threshold models.
+One of the keyways in which intergroup bias can affect complex contagion threshold models is through information filtering. Biased individuals may be more likely to accept or adopt information that aligns with their own group's beliefs or attitudes and may be less receptive to information from other groups. This can lead to the spread of biased or polarized information within groups, resulting in the formation of echo chambers or filter bubbles. Biased individuals may also selectively share information that supports their group's views, further reinforcing the biased contagion process.
+The overall dynamics of cascades in complex contagion threshold models can also be significantly impacted by intergroup bias. The presence of biased individuals or groups may lead to different patterns of cascades, with faster or slower spread of behaviors or information depending on the biases and interactions between groups. For example, biased groups may exhibit stronger and faster contagion processes within their own group, leading to the formation of distinct clusters with different behaviors or attitudes, and limited spread between groups.
+
+## Gender biased Initiator
+
+### Male Initiators
+
+We observe from the above graphs that that the diffusion is same as a non-bias random start for threshold < 20% and > 60%, however for thresholds between 30% and 50% the idea propagation has increased as compared to the non-bias random start. 
+
+```{r echo=FALSE, fig.align="center", fig.width=6, fig.height=3}
+p31a
+```
+
+```{r echo=FALSE, fig.align="center", fig.width=10, fig.height=3}
+plot_grid(p31c, p21c, scale=0.9, nrow=1)
+```
+
+### Female Initiators
+
+For threshold equal to 0.3 the simulation goes on for very few timestamps as compared to when all initiators were males, indicating that the diffusion level for women initiators at a 30% threshold is lower than that of men initiators. The results can be similarly seen in the simulation results, in which we observe that the contagion network stabilizes at the third timestep for female initiators versus at the seventh timestep for males. 
+
+This could be attributed to the fact that majority of the examiners are males.
+
+```{r echo=FALSE, fig.align="center", fig.width=6, fig.height=3}
+p31b
+```
+
+```{r echo=FALSE, fig.align="center", fig.width=10, fig.height=3}
+plot_grid(p31d, p21c, scale=0.9)
+```
+
+```{r echo=FALSE, fig.align="center", fig.width=6, fig.height=3}
+plot_grid(p1a, p1b)
+```
+
+## Race biased Initiator
+
+Given that the population being pre-dominantly white we decided to split the network into racially white individuals and others in order to investigate the impact of race on ideas contagion within the network. 
+
+The performance of the network with racially white initiators performs at par with the non white initiators network for threshold > 0.3. This is quite interesting since just one race has the same effect of propagating an idea within the network compared to all other races together. Analysis for thresholds below 0.3 is a bit insignificant in this case since centrality is affected significantly by cardinality. All races other than white put together heavily overshadow the former due to sheer bias in size and it can’t be assumed that all other races are biased amongst themselves.
+
+```{r echo=FALSE, fig.align="center", fig.width=10, fig.height=3}
+plot_grid(p32a, p32b, scale=0.9)
+plot_grid(p32c, p32d, scale=0.9)
+```
+
+## Centrality Based Initiator
+
+Centrality measures can reveal how information, influence, or resources flow through a network. For example, nodes with high betweenness centrality are likely to act as bridges, connecting different parts of a network. Nodes with high closeness centrality may have faster access to information or resources, allowing them to exert more influence on other nodes. By understanding the centrality of nodes in a network, we can gain insights into the dynamics of information or resource flow, and how the network as a whole functions.  
+To analyze the effect of centrality measures we set the initiators as the top 10 nodes with highest degree and betweenness centrality and compared its performance against bottom 10 nodes as imitators
+
+```{r echo=FALSE, fig.align="center", fig.width=10, fig.height=3}
+plot_grid(p33a, p33b, scale=0.9)
+plot_grid(p34a, p34b, scale=0.9)
+plot_grid(p33c, p34c, scale=0.9)
+```
+
+
+
+
+
+# Conclusion
+
+In conclusion, our study of threshold-limited cascades in social networks offers important insights into the intricate dynamics of opinion spread and the factors that influence it. The key findings of our research emphasize the roles of initiator characteristics, threshold distribution, and network structure in shaping the propagation of ideas and opinions within a social network. 
+
+Biases, including those related to gender and race, affect information dissemination, resulting in different cascade patterns. These biases were more pronounced for gender compared to race, with male initiators demonstrating greater idea diffusion than female initiators, particularly at high threshold levels. Although race bias had no significant impact on diffusion levels, a 30% threshold did cause the network to take longer to stabilize while maintaining similar diffusion levels. This suggests that selecting white male initiators may lead to faster dissemination, even if the ultimate diffusion levels remain comparable. 
+
+The centrality of initiators plays a crucial role in information spread within a network. Our analysis revealed that networks with top betweenness centrality initiators tend to have faster and more extensive information spread compared to those with top degree centrality initiators. This finding underscores the importance of considering global network connectivity and the role of bridge nodes in facilitating information diffusion. 
+
+As a concluding remark, the insights provided by our study hold significant value for UTPSO, as they reveal the complex interplay between initiator characteristics, threshold distribution, network structure, and biases in shaping the spread of opinions and ideas. By understanding these dynamics, UTPSO can leverage this knowledge to strategically select initiators, promote more efficient dissemination of information, and address potential biases that may hinder the diffusion process. Furthermore, recognizing the importance of global network connectivity and bridge nodes could help UTPSO design more effective communication strategies and foster a more inclusive and well-informed community. 
