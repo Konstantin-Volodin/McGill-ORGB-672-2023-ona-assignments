@@ -1,17 +1,16 @@
 ---
 title: "Report"
 author: 
-  - Adityo
-  - Sara
-  - Konstantin
-  - Utkarsh
+  - Adityo Das Gupta - 261107470
+  - Utkarsh Pal - 123
+  - Konstantin Volodin - 261083570
+  - Sara Zeineddine - 261113985
 date: "`r Sys.Date()`"
 output:
   pdf_document:
     toc: true
     toc_depth: 2
     number_sections: true
-    dev: jpeg
 header-includes: 
   - \renewcommand{\and}{\\}
 ---
